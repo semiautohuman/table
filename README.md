@@ -42,4 +42,4 @@ DeepSeek（默认）· Kimi · 智谱 GLM · 通义千问 · 豆包 · SiliconFl
 
 **半自动人类实验室 · Semiauto Human Lab** — 实验 002
 每期实验解决一件重复劳动，做出来的工具免费放出。
-微信公众号：半自动人类实验室
+📮 semiautohuman@outlook.com · 微信公众号：半自动人类实验室
