@@ -1,0 +1,17 @@
+{
+  "name": "表格急救箱 · 半自动人类实验室",
+  "short_name": "表格急救箱",
+  "description": "上传 Excel，一键处理或一句话让 AI 处理。数据不出你的电脑。",
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#faf8f4",
+  "theme_color": "#41604f",
+  "icons": [
+    {
+      "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='20' fill='%2341604f'/%3E%3Ctext x='50' y='68' font-size='50' text-anchor='middle' fill='%23faf8f4'%3E%E6%80%A5%3C/text%3E%3C/svg%3E",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}

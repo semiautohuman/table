@@ -1,0 +1,1538 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>表格急救箱 · 半自动人类实验室</title>
+<meta name="description" content="把表格里最烦的破事做成按钮：名单核对、去重、清洗、提取手机号……粘贴进来，一键搞定。纯本地处理，数据不出你的电脑。">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='48' fill='%2341604f'/%3E%3Ctext x='50' y='68' font-size='50' text-anchor='middle' fill='%23faf8f4'%3E%E6%80%A5%3C/text%3E%3C/svg%3E">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#41604f">
+<style>
+  :root {
+    --paper: #faf8f4; --ink: #2b2925; --muted: #8b867c; --line: #e7e3da;
+    --accent: #41604f; --accent-soft: #eef2ee; --warn: #b4543a;
+    --sans: -apple-system, "PingFang SC", "HarmonyOS Sans SC", "MiSans", "Microsoft YaHei", "Segoe UI", sans-serif;
+    --mono: Consolas, "Courier New", monospace;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: var(--paper); color: var(--ink); font-family: var(--sans); font-size: 15px; line-height: 1.7; }
+  .wrap { max-width: 860px; margin: 0 auto; padding: 0 20px 60px; }
+
+  header { padding: 36px 0 8px; }
+  header h1 { font-size: 28px; letter-spacing: 0.05em; }
+  header .sub { color: var(--muted); font-size: 13px; margin-top: 4px; }
+  .badges { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+  .badge { font-size: 12px; color: var(--accent); background: var(--accent-soft); border-radius: 99px; padding: 3px 12px; }
+  .notice { margin-top: 14px; font-size: 13px; color: var(--muted); border: 1px dashed var(--line); border-radius: 10px; padding: 8px 14px; background: #fff; }
+
+  nav.tabs { display: flex; flex-wrap: wrap; gap: 8px; margin: 22px 0 18px; }
+  .tab {
+    border: 1px solid var(--line); background: #fff; color: var(--ink);
+    border-radius: 99px; padding: 6px 16px; font-size: 14px; cursor: pointer; font-family: var(--sans);
+  }
+  .tab:hover { border-color: var(--accent); }
+  .tab.on { background: var(--accent); color: var(--paper); border-color: var(--accent); }
+
+  .panel { display: none; border: 1px solid var(--line); border-radius: 14px; background: #fff; padding: 22px; }
+  .panel.on { display: block; }
+  .hint { font-size: 13.5px; color: var(--muted); margin-bottom: 14px; }
+  .hint b { color: var(--ink); }
+
+  label.lab { display: block; font-size: 13px; color: var(--muted); margin: 10px 0 4px; }
+  textarea {
+    width: 100%; min-height: 150px; border: 1px solid var(--line); border-radius: 10px;
+    padding: 10px 12px; font-family: var(--mono); font-size: 13px; line-height: 1.6;
+    background: var(--paper); color: var(--ink); resize: vertical;
+  }
+  textarea:focus { outline: 2px solid var(--accent-soft); border-color: var(--accent); }
+  textarea[readonly] { background: #fff; }
+  .count { font-size: 12px; color: var(--muted); margin-top: 3px; }
+
+  .cols2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  @media (max-width: 640px) { .cols2 { grid-template-columns: 1fr; } }
+
+  .opts { display: flex; flex-wrap: wrap; gap: 14px; align-items: center; margin: 12px 0; font-size: 13.5px; }
+  .opts label { display: flex; align-items: center; gap: 5px; cursor: pointer; }
+  .opts input[type="text"], .opts input[type="number"] {
+    border: 1px solid var(--line); border-radius: 8px; padding: 4px 10px;
+    font-family: var(--mono); font-size: 13px; width: 90px; background: var(--paper);
+  }
+  .opts select { border: 1px solid var(--line); border-radius: 8px; padding: 4px 8px; font-size: 13px; background: var(--paper); }
+
+  .btn {
+    border: none; background: var(--accent); color: var(--paper); border-radius: 99px;
+    padding: 9px 26px; font-size: 14.5px; cursor: pointer; font-family: var(--sans); letter-spacing: 0.05em;
+  }
+  .btn:hover { opacity: 0.9; }
+  .btn.ghost { background: #fff; color: var(--accent); border: 1px solid var(--accent); padding: 5px 16px; font-size: 13px; }
+
+  .out-block { margin-top: 16px; }
+  .out-head { display: flex; align-items: center; gap: 10px; font-size: 13.5px; margin-bottom: 5px; }
+  .out-head .t { font-weight: 600; }
+  .out-head .n { color: var(--muted); font-size: 12.5px; }
+  .out-head .warn { color: var(--warn); }
+  .out-block textarea { min-height: 110px; }
+
+  /* ── AI 面板 ── */
+  .tab.ai, .tab.file { color: var(--accent); border-color: var(--accent); font-weight: 600; }
+  .step { border: 1px solid var(--line); border-radius: 12px; background: var(--paper); padding: 16px 18px; margin-top: 14px; }
+  .step h2 { font-size: 15px; margin-bottom: 10px; }
+  .step h2 em { font-style: normal; color: var(--accent); margin-right: 8px; }
+  .btn:disabled { background: var(--muted); cursor: not-allowed; }
+  .row { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 12px; }
+  .fileinfo { font-size: 13.5px; margin-top: 10px; }
+  .fileinfo b { color: var(--accent); }
+  #p-ai input[type="file"] { font-size: 13px; }
+  #p-ai input[type="text"], #p-ai input[type="password"], #p-file input[type="text"] {
+    width: 100%; border: 1px solid var(--line); border-radius: 10px; padding: 9px 12px;
+    font-family: var(--mono); font-size: 13px; background: var(--paper); color: var(--ink);
+  }
+  #p-ai select { border: 1px solid var(--line); border-radius: 8px; padding: 4px 8px; font-size: 13px; background: var(--paper); }
+  table.preview { border-collapse: collapse; font-size: 12.5px; margin-top: 10px; max-width: 100%; display: block; overflow-x: auto; white-space: nowrap; }
+  table.preview td, table.preview th { border: 1px solid var(--line); padding: 3px 9px; font-family: var(--mono); }
+  table.preview tr:first-child td { background: var(--accent-soft); font-weight: 600; }
+  #log { font-size: 13px; margin-top: 12px; font-family: var(--mono); color: var(--muted); }
+  #log .ok { color: var(--accent); }
+  #log .err { color: var(--warn); }
+  #p-ai details summary { cursor: pointer; color: var(--muted); font-size: 13px; }
+  #p-ai details pre { background: #fff; border: 1px solid var(--line); border-radius: 10px; padding: 12px; overflow-x: auto; font-size: 12px; margin-top: 8px; }
+  .examples { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+  .ex { font-size: 12px; border: 1px solid var(--line); border-radius: 99px; padding: 3px 12px; cursor: pointer; color: var(--muted); background: #fff; }
+  .ex:hover { border-color: var(--accent); color: var(--accent); }
+
+  /* ── 整合抽屉 / 语言 / 进度条 ── */
+  .wrap { display: flex; flex-direction: column; }
+  #pastebox { order: 5; border: 1px dashed var(--line); border-radius: 14px; background: #fff; padding: 14px 20px; margin-top: 18px; }
+  #pastebox summary { cursor: pointer; color: var(--muted); font-size: 13.5px; }
+  #pastebox .panel { border: none; padding: 16px 2px 4px; }
+  .wrap > footer { order: 9; }
+  .langsel { float: right; border: 1px solid var(--line); border-radius: 8px; padding: 3px 8px; font-size: 12.5px; background: #fff; color: var(--muted); }
+  .pbar { height: 6px; background: var(--line); border-radius: 99px; overflow: hidden; margin-top: 12px; }
+  .pfill { height: 100%; width: 34%; background: var(--accent); border-radius: 99px; animation: pslide 1.1s ease-in-out infinite alternate; }
+  @keyframes pslide { from { margin-left: 0 } to { margin-left: 66% } }
+  #progTxt { font-size: 12.5px; color: var(--muted); margin-top: 4px; }
+
+  footer { margin-top: 34px; font-size: 12.5px; color: var(--muted); text-align: center; line-height: 2; }
+  footer b { color: var(--accent); }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <span class="langsel">🌐 Language <select id="lang" style="border:none;background:transparent;color:inherit;font-size:12.5px;cursor:pointer"><option value="zh">中文</option><option value="en">English</option></select></span>
+  <h1>🧰 表格急救箱</h1>
+  <div class="sub">半自动人类实验室 · 实验 001</div>
+  <div class="badges">
+    <span class="badge">零配置，打开就用</span>
+    <span class="badge">数据不出你的电脑</span>
+    <span class="badge">免费无广告</span>
+    <span class="badge">🤖 新：AI 模式（内测）</span>
+  </div>
+  <div class="notice">✈️ 文件工具与粘贴小工具 100% 本地运行，断网也能用；🤖 AI 模式需联网调用大模型，但默认只发送「你的问题 + 表头」，表格数据仍留在你的电脑里。</div>
+</header>
+
+<nav class="tabs" id="tabs">
+  <button class="tab ai on" data-p="ai">🤖 AI 智能处理</button>
+  <button class="tab file" data-p="file">📂 Excel 文件工具</button>
+</nav>
+
+<!-- 粘贴小工具（整合抽屉，默认折叠） -->
+<details class="pastebox" id="pastebox">
+  <summary>🧩 更多小工具：不用上传文件的 8 个粘贴快捷功能（名单核对 / 接龙提取手机号 / 随机抽签…）</summary>
+  <nav class="tabs" id="subtabs" style="margin:14px 0 4px">
+    <button class="tab on" data-p="check">名单核对</button>
+    <button class="tab" data-p="dedup">去重</button>
+    <button class="tab" data-p="clean">清洗</button>
+    <button class="tab" data-p="extract">批量提取</button>
+    <button class="tab" data-p="split">拆列 / 合并</button>
+    <button class="tab" data-p="fix">加前后缀</button>
+    <button class="tab" data-p="transpose">转置</button>
+    <button class="tab" data-p="group">分组 / 抽签</button>
+  </nav>
+
+<!-- 名单核对 -->
+<section class="panel on" id="p-check">
+  <p class="hint"><b>谁没交表？谁多出来的？</b>把两份名单分别粘贴到左右两栏（从 Excel 复制一列，或一行一个），点核对。</p>
+  <div class="cols2">
+    <div>
+      <label class="lab">名单 A（基准名单，如：应交 / 应到 / 全员）</label>
+      <textarea id="checkA" placeholder="张三&#10;李四&#10;王五"></textarea>
+      <div class="count" id="checkA-n"></div>
+    </div>
+    <div>
+      <label class="lab">名单 B（实际名单，如：已交 / 已到 / 已报名）</label>
+      <textarea id="checkB" placeholder="李四&#10;王五&#10;赵六"></textarea>
+      <div class="count" id="checkB-n"></div>
+    </div>
+  </div>
+  <div class="opts">
+    <label><input type="checkbox" id="checkSpace" checked> 忽略名字里的空格（"张 三"＝"张三"）</label>
+    <label><input type="checkbox" id="checkCase" checked> 忽略英文大小写</label>
+  </div>
+  <button class="btn" onclick="runCheck()">开始核对</button>
+  <div class="out-block">
+    <div class="out-head"><span class="t warn">只在 A（没交 / 缺席）</span><span class="n" id="outA-n"></span><button class="btn ghost" onclick="copyOut('outA', this)">复制</button></div>
+    <textarea id="outA" readonly></textarea>
+  </div>
+  <div class="out-block">
+    <div class="out-head"><span class="t">只在 B（多出来的）</span><span class="n" id="outB-n"></span><button class="btn ghost" onclick="copyOut('outB', this)">复制</button></div>
+    <textarea id="outB" readonly></textarea>
+  </div>
+  <div class="out-block">
+    <div class="out-head"><span class="t">两边都有</span><span class="n" id="outBoth-n"></span><button class="btn ghost" onclick="copyOut('outBoth', this)">复制</button></div>
+    <textarea id="outBoth" readonly></textarea>
+  </div>
+</section>
+
+<!-- 去重 -->
+<section class="panel" id="p-dedup">
+  <p class="hint">粘贴一列数据，<b>重复的挑出来或删掉</b>。保留每项第一次出现的顺序。</p>
+  <label class="lab">原始数据</label>
+  <textarea id="dedupIn"></textarea>
+  <div class="count" id="dedupIn-n"></div>
+  <div class="opts">
+    <label><input type="checkbox" id="dedupTrim" checked> 比对时忽略首尾空格</label>
+  </div>
+  <button class="btn" onclick="runDedup()">去重</button>
+  <div class="out-block">
+    <div class="out-head"><span class="t">去重结果</span><span class="n" id="dedupOut-n"></span><button class="btn ghost" onclick="copyOut('dedupOut', this)">复制</button></div>
+    <textarea id="dedupOut" readonly></textarea>
+  </div>
+  <div class="out-block">
+    <div class="out-head"><span class="t warn">被去掉的重复项</span><span class="n" id="dedupDup-n"></span><button class="btn ghost" onclick="copyOut('dedupDup', this)">复制</button></div>
+    <textarea id="dedupDup" readonly></textarea>
+  </div>
+</section>
+
+<!-- 清洗 -->
+<section class="panel" id="p-clean">
+  <p class="hint">公式明明写对了却报错？多半是<b>看不见的空格和空行</b>在捣鬼。粘贴进来，一键洗干净。</p>
+  <label class="lab">原始数据</label>
+  <textarea id="cleanIn"></textarea>
+  <div class="count" id="cleanIn-n"></div>
+  <div class="opts">
+    <label><input type="checkbox" id="cleanEmpty" checked> 删除空行</label>
+    <label><input type="checkbox" id="cleanTrim" checked> 去掉每行首尾空格</label>
+    <label><input type="checkbox" id="cleanFull" checked> 全角空格 → 普通空格</label>
+    <label><input type="checkbox" id="cleanAll"> 去掉所有空格（慎用）</label>
+  </div>
+  <button class="btn" onclick="runClean()">清洗</button>
+  <div class="out-block">
+    <div class="out-head"><span class="t">清洗结果</span><span class="n" id="cleanOut-n"></span><button class="btn ghost" onclick="copyOut('cleanOut', this)">复制</button></div>
+    <textarea id="cleanOut" readonly></textarea>
+  </div>
+</section>
+
+<!-- 批量提取 -->
+<section class="panel" id="p-extract">
+  <p class="hint">从一堆乱文本里<b>把要的东西抓出来</b>。典型用法：微信接龙消息整段粘进来，手机号一列输出。</p>
+  <label class="lab">原始文本（多乱都行）</label>
+  <textarea id="extractIn" placeholder="1. 张三 13800001111 已交&#10;2. 李四13900002222还没交&#10;……"></textarea>
+  <div class="opts">
+    <label>提取：<select id="extractType">
+      <option value="phone">手机号</option>
+      <option value="email">邮箱</option>
+      <option value="number">数字</option>
+    </select></label>
+    <label><input type="checkbox" id="extractDedup" checked> 结果去重</label>
+  </div>
+  <button class="btn" onclick="runExtract()">提取</button>
+  <div class="out-block">
+    <div class="out-head"><span class="t">提取结果</span><span class="n" id="extractOut-n"></span><button class="btn ghost" onclick="copyOut('extractOut', this)">复制</button></div>
+    <textarea id="extractOut" readonly></textarea>
+  </div>
+</section>
+
+<!-- 拆列 / 合并 -->
+<section class="panel" id="p-split">
+  <p class="hint">"张三-13800001111" 一键<b>拆成两列</b>；或者把 Excel 里的两列<b>合成一列</b>。结果可以直接粘回 Excel。</p>
+  <div class="opts">
+    <label><input type="radio" name="splitMode" value="split" checked onchange="splitModeUI()"> 拆列</label>
+    <label><input type="radio" name="splitMode" value="merge" onchange="splitModeUI()"> 合并列</label>
+    <label>分隔符：<input type="text" id="splitSep" value="-" placeholder="如 - 、空格"></label>
+  </div>
+  <label class="lab" id="splitInLab">原始数据（一行一条，将按分隔符拆开）</label>
+  <textarea id="splitIn" placeholder="张三-13800001111&#10;李四-13900002222"></textarea>
+  <div class="count" id="splitIn-n"></div>
+  <button class="btn" onclick="runSplit()">执行</button>
+  <div class="out-block">
+    <div class="out-head"><span class="t">结果（直接粘贴回 Excel 即自动分列）</span><span class="n" id="splitOut-n"></span><button class="btn ghost" onclick="copyOut('splitOut', this)">复制</button></div>
+    <textarea id="splitOut" readonly></textarea>
+  </div>
+</section>
+
+<!-- 加前后缀 -->
+<section class="panel" id="p-fix">
+  <p class="hint">给一列的每一项<b>批量加上固定的开头或结尾</b>。比如把名单批量变成"张三的简历.pdf"。</p>
+  <label class="lab">原始数据</label>
+  <textarea id="fixIn"></textarea>
+  <div class="count" id="fixIn-n"></div>
+  <div class="opts">
+    <label>前缀：<input type="text" id="fixPre" placeholder="加在开头"></label>
+    <label>后缀：<input type="text" id="fixSuf" placeholder="加在结尾"></label>
+    <label><input type="checkbox" id="fixSkipEmpty" checked> 删除空行</label>
+  </div>
+  <button class="btn" onclick="runFix()">执行</button>
+  <div class="out-block">
+    <div class="out-head"><span class="t">结果</span><span class="n" id="fixOut-n"></span><button class="btn ghost" onclick="copyOut('fixOut', this)">复制</button></div>
+    <textarea id="fixOut" readonly></textarea>
+  </div>
+</section>
+
+<!-- 转置 -->
+<section class="panel" id="p-transpose">
+  <p class="hint">从 Excel 复制一块区域粘进来，<b>横的变竖的，竖的变横的</b>，复制回去即可。</p>
+  <label class="lab">原始数据（直接从 Excel 复制粘贴）</label>
+  <textarea id="transIn"></textarea>
+  <div class="count" id="transIn-n"></div>
+  <button class="btn" onclick="runTranspose()">转置</button>
+  <div class="out-block">
+    <div class="out-head"><span class="t">结果（直接粘贴回 Excel）</span><span class="n" id="transOut-n"></span><button class="btn ghost" onclick="copyOut('transOut', this)">复制</button></div>
+    <textarea id="transOut" readonly></textarea>
+  </div>
+</section>
+
+<!-- 分组 / 抽签 -->
+<section class="panel" id="p-group">
+  <p class="hint">名单粘进来，<b>随机分组或随机抽人</b>。分组、值日、抽奖一键搞定。</p>
+  <label class="lab">名单（一行一个）</label>
+  <textarea id="groupIn"></textarea>
+  <div class="count" id="groupIn-n"></div>
+  <div class="opts">
+    <label><input type="radio" name="groupMode" value="group" checked onchange="groupModeUI()"> 随机分组</label>
+    <label><input type="radio" name="groupMode" value="pick" onchange="groupModeUI()"> 随机抽签</label>
+    <label><span id="groupNLab">分成几组</span>：<input type="number" id="groupN" value="4" min="1" style="width:70px"></label>
+  </div>
+  <button class="btn" onclick="runGroup()">开始</button>
+  <div class="out-block">
+    <div class="out-head"><span class="t">结果</span><span class="n" id="groupOut-n"></span><button class="btn ghost" onclick="copyOut('groupOut', this)">复制</button></div>
+    <textarea id="groupOut" readonly></textarea>
+  </div>
+</section>
+
+</details>
+
+<!-- 文件工具（免 AI） -->
+<section class="panel" id="p-file">
+  <p class="hint"><b>上传 Excel → 点一个按钮 → 下载处理好的 Excel。</b>全部在你的电脑本地完成，不联网、不用 AI、完全免费。</p>
+  <div class="step">
+    <h2><em>①</em> 选择表格文件</h2>
+    <input type="file" id="file2" accept=".xlsx,.xls,.csv">
+    <div class="fileinfo" id="fileinfo2"></div>
+  </div>
+  <div class="step">
+    <h2><em>②</em> 选一个操作，直接出文件</h2>
+    <div class="row">
+      <button class="btn ghost" onclick="fqClean()">🧹 一键清理（空行 / 空格 / 全角空格）</button>
+      <button class="btn ghost" onclick="fqDedup()">🗑 整行去重</button>
+      <button class="btn ghost" onclick="fqMask()">🔒 手机号一键打码</button>
+    </div>
+    <div class="row">
+      <button class="btn ghost" onclick="fqSplit()">✂️ 按列拆分成多个工作表</button>
+      <input type="text" id="splitCol" placeholder="拆分依据的列名，如：部门" style="max-width:220px">
+    </div>
+    <div class="row">
+      <button class="btn ghost" onclick="$('mergeFiles').click()">➕ 合并多个表格文件</button>
+      <input type="file" id="mergeFiles" accept=".xlsx,.xls,.csv" multiple style="display:none">
+      <button class="btn ghost" onclick="printA4()">🖨️ A4 打印排版</button>
+      <button class="btn ghost" onclick="dlPrintXlsx()">📄 下载打印版 Excel</button>
+    </div>
+    <div class="hint" id="fqMsg" style="margin-top:8px"></div>
+  </div>
+</section>
+
+<!-- AI 处理 -->
+<section class="panel on" id="p-ai">
+  <p class="hint"><b>一句话描述需求，AI 生成处理代码，在你的浏览器本地执行。</b>
+  默认 AI 只看到你的问题和表头，不看数据；不含隐私的数据也可以选择全量发送。内测功能，结果请抽查核对。</p>
+
+  <div class="step">
+    <h2><em>①</em> 选择表格文件</h2>
+    <input type="file" id="file" accept=".xlsx,.xls,.csv">
+    <div class="hint" style="margin-top:6px">支持 .xlsx / .xls / .csv。文件只在浏览器里读取，不会上传到任何服务器。</div>
+    <div class="fileinfo" id="fileinfo"></div>
+    <div id="beforePrev"></div>
+    <div class="row" id="quickPrint" style="display:none">
+      <button class="btn ghost" onclick="printA4()">🖨️ A4 打印排版（无需 AI，自动缩放到一页）</button>
+      <button class="btn ghost" id="aiLayoutBtn" onclick="aiLayout()">🤖 AI 优化排版（智能选方向/字号/对齐）</button>
+      <button class="btn ghost" onclick="dlPrintXlsx()">📄 下载打印版 Excel（内置缩放到一页）</button>
+      <label class="hint" style="align-self:center;display:flex;gap:5px;align-items:center"><input type="checkbox" id="landscape"> 横向纸张（列多时勾选）</label>
+      <span class="hint" id="qpMsg" style="align-self:center"></span>
+    </div>
+  </div>
+
+  <div class="step">
+    <h2><em>②</em> 一句话描述你想怎么处理</h2>
+    <textarea id="ask" style="min-height:80px" placeholder="例如：把B列为空的行删掉，然后按金额从大到小排序"></textarea>
+    <div class="hint" style="margin-top:6px">什么需求都可以提：改数据、清洗统计，或打印排版、美化样式、页面设置——AI 会自己诊断、选择做法并生成结果（涉及格式的会直接产出排版好的 Excel 文件）。第 ① 步的按钮是常用需求的免 AI 快捷方式。</div>
+    <div class="examples">
+      <span class="ex" onclick="fillEx(this)">删掉所有重复的行</span>
+      <span class="ex" onclick="fillEx(this)">按金额列从大到小排序</span>
+      <span class="ex" onclick="fillEx(this)">手机号中间四位换成 ****</span>
+      <span class="ex" onclick="fillEx(this)">把日期统一成 2026-01-01 这种格式</span>
+      <span class="ex" onclick="fillEx(this)">按部门分别统计人数和金额合计</span>
+    </div>
+    <div class="opts" style="margin-top:10px">
+      <label>数据可见范围：<select id="dataScope" onchange="scopeHint()">
+        <option value="sample">表头 + 前 2 行示例（推荐）</option>
+        <option value="header">只发表头（最私密）</option>
+        <option value="all">发送全部数据（不含隐私时可用）</option>
+      </select></label>
+    </div>
+    <div class="hint" id="scopeMsg" style="margin-top:6px"></div>
+  </div>
+
+  <div class="step">
+    <h2><em>③</em> 处理与导出</h2>
+    <button class="btn" id="go" onclick="run()">让 AI 处理</button>
+    <div id="prog" style="display:none"><div class="pbar"><div class="pfill"></div></div><div id="progTxt"></div></div>
+    <div id="log"></div>
+    <div id="afterPrev"></div>
+    <div class="row" id="dl" style="display:none">
+      <button class="btn ghost" onclick="dlXlsx()">下载 Excel</button>
+      <button class="btn ghost" onclick="dlCsv()">下载 CSV</button>
+      <button class="btn ghost" onclick="dlWord()">下载 Word</button>
+      <button class="btn ghost" onclick="dlPdf()">导出 PDF</button>
+      <span class="hint" style="align-self:center">PDF：在弹出的打印窗口里选「另存为 PDF」</span>
+    </div>
+    <details id="codeBox" style="display:none"><summary>查看 AI 生成的处理代码（透明可审）</summary><pre id="code"></pre></details>
+  </div>
+
+  <details class="step">
+    <summary>⚙️ 设置（首次使用必填）</summary>
+    <div style="margin-top:12px">
+      <label class="hint">模型服务商（选择后自动填好接口地址和推荐模型）</label>
+      <select id="provider" onchange="providerFill()">
+        <option value="deepseek">DeepSeek（默认，推荐）</option>
+        <option value="kimi">Kimi · 月之暗面</option>
+        <option value="glm">智谱 GLM</option>
+        <option value="qwen">通义千问 · 阿里百炼</option>
+        <option value="doubao">豆包 · 火山方舟</option>
+        <option value="siliconflow">硅基流动 SiliconFlow</option>
+        <option value="openai">OpenAI</option>
+        <option value="anthropic">Claude · Anthropic</option>
+        <option value="gemini">Gemini · Google</option>
+        <option value="xai">Grok · xAI</option>
+        <option value="openrouter">OpenRouter（聚合：一个 Key 用遍全球模型）</option>
+        <option value="custom">自定义（任何 OpenAI 兼容接口）</option>
+      </select>
+      <div class="hint" style="margin-top:4px">提示：浏览器直连需服务商支持——国内各家、Gemini、OpenRouter 一般可以；OpenAI 官方接口通常不允许浏览器直连，海外用户推荐 OpenRouter。模型名更新很快，预填值仅供参考，以各家文档为准，可直接修改。</div>
+      <label class="hint" style="display:block;margin-top:10px">API Key（仅保存在你自己浏览器的本地存储里——不在网页文件中、不会上传、分享网页文件也不会带出去）</label>
+      <input type="password" id="key" placeholder="sk-...">
+      <label class="hint" style="display:block;margin-top:10px">接口地址（选服务商后自动填写，可改）</label>
+      <input type="text" id="base" placeholder="https://api.deepseek.com">
+      <label class="hint" style="display:block;margin-top:10px">模型</label>
+      <input type="text" id="model" placeholder="deepseek-v4-pro">
+      <label class="hint" style="display:block;margin-top:10px">思考力度（越高越聪明，也越慢；目前仅 DeepSeek 支持）</label>
+      <select id="effort">
+        <option value="max">Max · 最强（复杂需求，较慢）</option>
+        <option value="high">High · 均衡</option>
+        <option value="off">关闭思考 · 最快（简单需求）</option>
+      </select>
+      <div class="row"><button class="btn ghost" onclick="saveSet()">保存设置</button><button class="btn ghost" onclick="clearKey()">清除 Key</button><span class="hint" id="setMsg" style="align-self:center"></span></div>
+    </div>
+  </details>
+</section>
+
+<footer>
+  <b>半自动人类实验室</b> · 实验 001 & 002 · 把重复交给机器，把时间还给人<br>
+  本页是一个独立文件：右键另存到桌面即可使用（快捷工具断网可用，AI 模式需联网）<br>
+  公众号「半自动人类实验室」
+</footer>
+
+</div>
+<script>
+// ---------- 工具函数 ----------
+function $(id) { return document.getElementById(id); }
+function linesOf(id, keepEmpty) {
+  var raw = $(id).value.replace(/\r/g, '').split('\n');
+  return keepEmpty ? raw : raw.filter(function (l) { return l.trim() !== ''; });
+}
+function setOut(id, arr, label) {
+  $(id).value = arr.join('\n');
+  var n = $(id + '-n');
+  if (n) n.textContent = arr.length ? '共 ' + arr.length + ' ' + (label || '行') : '（无）';
+}
+function copyOut(id, btn) {
+  var text = $(id).value;
+  if (!text) return;
+  function done() {
+    var old = btn.textContent; btn.textContent = '已复制 ✓';
+    setTimeout(function () { btn.textContent = old; }, 1200);
+  }
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text).then(done).catch(function () { fallbackCopy(id, done); });
+  } else { fallbackCopy(id, done); }
+}
+function fallbackCopy(id, done) {
+  var ta = $(id); ta.removeAttribute('readonly'); ta.select();
+  try { document.execCommand('copy'); done(); } catch (e) { alert('复制失败，请手动全选复制'); }
+  ta.setAttribute('readonly', ''); window.getSelection().removeAllRanges();
+}
+// 输入框行数实时统计
+['checkA','checkB','dedupIn','cleanIn','splitIn','fixIn','transIn','groupIn'].forEach(function (id) {
+  $(id).addEventListener('input', function () {
+    var n = $(id + '-n');
+    if (n) { var c = linesOf(id).length; n.textContent = c ? '共 ' + c + ' 行' : ''; }
+  });
+});
+// 主 Tab 切换（只管 AI / 文件工具两个主面板）
+document.querySelectorAll('#tabs .tab').forEach(function (tab) {
+  tab.addEventListener('click', function () {
+    document.querySelectorAll('#tabs .tab').forEach(function (t) { t.classList.remove('on'); });
+    ['ai', 'file'].forEach(function (id) { var p = $('p-' + id); if (p) p.classList.remove('on'); });
+    tab.classList.add('on');
+    $('p-' + tab.dataset.p).classList.add('on');
+  });
+});
+// 抽屉里的粘贴小工具切换
+document.querySelectorAll('#subtabs .tab').forEach(function (tab) {
+  tab.addEventListener('click', function () {
+    document.querySelectorAll('#subtabs .tab').forEach(function (t) { t.classList.remove('on'); });
+    ['check', 'dedup', 'clean', 'extract', 'split', 'fix', 'transpose', 'group'].forEach(function (id) { $('p-' + id).classList.remove('on'); });
+    tab.classList.add('on');
+    $('p-' + tab.dataset.p).classList.add('on');
+  });
+});
+
+// ---------- 1 名单核对 ----------
+function runCheck() {
+  var norm = function (s) {
+    var t = s.trim();
+    if ($('checkSpace').checked) t = t.replace(/[\s　]+/g, '');
+    if ($('checkCase').checked) t = t.toLowerCase();
+    return t;
+  };
+  var A = linesOf('checkA'), B = linesOf('checkB');
+  var mapA = new Map(), mapB = new Map();
+  A.forEach(function (x) { var k = norm(x); if (k && !mapA.has(k)) mapA.set(k, x.trim()); });
+  B.forEach(function (x) { var k = norm(x); if (k && !mapB.has(k)) mapB.set(k, x.trim()); });
+  var onlyA = [], onlyB = [], both = [];
+  mapA.forEach(function (v, k) { (mapB.has(k) ? both : onlyA).push(v); });
+  mapB.forEach(function (v, k) { if (!mapA.has(k)) onlyB.push(v); });
+  setOut('outA', onlyA, '人'); setOut('outB', onlyB, '人'); setOut('outBoth', both, '人');
+}
+
+// ---------- 2 去重 ----------
+function runDedup() {
+  var trim = $('dedupTrim').checked;
+  var seen = new Set(), kept = [], dups = [];
+  linesOf('dedupIn').forEach(function (l) {
+    var k = trim ? l.trim() : l;
+    if (seen.has(k)) { dups.push(l.trim()); } else { seen.add(k); kept.push(l.trim()); }
+  });
+  setOut('dedupOut', kept); setOut('dedupDup', dups);
+}
+
+// ---------- 3 清洗 ----------
+function runClean() {
+  var out = linesOf('cleanIn', true).map(function (l) {
+    if ($('cleanFull').checked) l = l.replace(/　/g, ' ');
+    if ($('cleanTrim').checked) l = l.trim();
+    if ($('cleanAll').checked) l = l.replace(/\s+/g, '');
+    return l;
+  });
+  if ($('cleanEmpty').checked) out = out.filter(function (l) { return l !== ''; });
+  setOut('cleanOut', out);
+}
+
+// ---------- 4 批量提取 ----------
+function runExtract() {
+  var text = $('extractIn').value;
+  var type = $('extractType').value, m;
+  if (type === 'phone') {
+    m = [];
+    var re = /(?:^|\D)(1[3-9]\d{9})(?!\d)/g, hit;
+    while ((hit = re.exec(text)) !== null) m.push(hit[1]);
+  }
+  else if (type === 'email') m = text.match(/[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/g);
+  else m = text.match(/-?\d+(?:\.\d+)?/g);
+  var out = m || [];
+  if ($('extractDedup').checked) out = Array.from(new Set(out));
+  setOut('extractOut', out, '个');
+}
+
+// ---------- 5 拆列 / 合并 ----------
+function splitModeUI() {
+  var mode = document.querySelector('input[name="splitMode"]:checked').value;
+  $('splitInLab').textContent = mode === 'split'
+    ? '原始数据（一行一条，将按分隔符拆开）'
+    : '原始数据（从 Excel 复制多列粘贴进来，将按分隔符合并）';
+  $('splitIn').placeholder = mode === 'split' ? '张三-13800001111\n李四-13900002222' : '（从 Excel 直接复制两列粘贴到这里）';
+}
+function runSplit() {
+  var mode = document.querySelector('input[name="splitMode"]:checked').value;
+  var sep = $('splitSep').value;
+  if (sep === '') { alert('请填写分隔符'); return; }
+  var out = linesOf('splitIn').map(function (l) {
+    return mode === 'split' ? l.split(sep).map(function (s) { return s.trim(); }).join('\t')
+                            : l.split('\t').join(sep);
+  });
+  setOut('splitOut', out);
+}
+
+// ---------- 6 加前后缀 ----------
+function runFix() {
+  var pre = $('fixPre').value, suf = $('fixSuf').value;
+  var src = linesOf('fixIn', !$('fixSkipEmpty').checked);
+  var out = src.map(function (l) { var t = l.trim(); return t === '' ? l : pre + t + suf; });
+  setOut('fixOut', out);
+}
+
+// ---------- 7 转置 ----------
+function runTranspose() {
+  var rows = linesOf('transIn').map(function (l) { return l.split('\t'); });
+  if (!rows.length) { setOut('transOut', []); return; }
+  var maxCol = Math.max.apply(null, rows.map(function (r) { return r.length; }));
+  var out = [];
+  for (var c = 0; c < maxCol; c++) {
+    out.push(rows.map(function (r) { return r[c] === undefined ? '' : r[c]; }).join('\t'));
+  }
+  setOut('transOut', out);
+}
+
+// ---------- 8 分组 / 抽签 ----------
+function groupModeUI() {
+  var mode = document.querySelector('input[name="groupMode"]:checked').value;
+  $('groupNLab').textContent = mode === 'pick' ? '抽出几人' : '分成几组';
+}
+function runGroup() {
+  var list = linesOf('groupIn').map(function (l) { return l.trim(); });
+  var n = parseInt($('groupN').value, 10);
+  if (!list.length || !n || n < 1) { alert('请粘贴名单并填写数量'); return; }
+  // Fisher-Yates 洗牌
+  for (var i = list.length - 1; i > 0; i--) {
+    var j = Math.floor(Math.random() * (i + 1));
+    var t = list[i]; list[i] = list[j]; list[j] = t;
+  }
+  var mode = document.querySelector('input[name="groupMode"]:checked').value;
+  var out = [];
+  if (mode === 'pick') {
+    out = list.slice(0, Math.min(n, list.length));
+    setOut('groupOut', out, '人');
+  } else {
+    var groups = [];
+    for (var g = 0; g < n; g++) groups.push([]);
+    list.forEach(function (name, idx) { groups[idx % n].push(name); });
+    groups.forEach(function (g2, idx) {
+      out.push('【第 ' + (idx + 1) + ' 组】（' + g2.length + ' 人）');
+      out = out.concat(g2); out.push('');
+    });
+    setOut('groupOut', out);
+    $('groupOut-n').textContent = '共 ' + list.length + ' 人，分 ' + n + ' 组';
+  }
+}
+
+// ==================== AI 模式（实验 002）====================
+var rows = null, outRows = null, fileName = '', srcBuf = null;
+
+var PROVIDERS = {
+  deepseek: { base: 'https://api.deepseek.com', model: 'deepseek-v4-pro' },
+  kimi: { base: 'https://api.moonshot.cn/v1', model: 'kimi-k2' },
+  glm: { base: 'https://open.bigmodel.cn/api/paas/v4', model: 'glm-4.5' },
+  qwen: { base: 'https://dashscope.aliyuncs.com/compatible-mode/v1', model: 'qwen-max' },
+  doubao: { base: 'https://ark.cn-beijing.volces.com/api/v3', model: 'ep-（填你在方舟创建的接入点ID）' },
+  siliconflow: { base: 'https://api.siliconflow.cn/v1', model: 'deepseek-ai/DeepSeek-V3' },
+  openai: { base: 'https://api.openai.com/v1', model: 'gpt-5' },
+  anthropic: { base: 'https://api.anthropic.com/v1', model: 'claude-sonnet-5' },
+  gemini: { base: 'https://generativelanguage.googleapis.com/v1beta/openai', model: 'gemini-3-pro' },
+  xai: { base: 'https://api.x.ai/v1', model: 'grok-4' },
+  openrouter: { base: 'https://openrouter.ai/api/v1', model: 'anthropic/claude-sonnet-5' },
+  custom: { base: '', model: '' }
+};
+function providerFill() {
+  var p = PROVIDERS[$('provider').value];
+  if (!p) return;
+  $('base').value = p.base;
+  $('model').value = p.model;
+  $('setMsg').textContent = '已按服务商填好，模型名可按官方文档修改，记得点保存';
+}
+function clearKey() {
+  localStorage.removeItem('sahl_key');
+  $('key').value = '';
+  $('setMsg').textContent = '已清除本机保存的 Key';
+}
+function saveSet() {
+  localStorage.setItem('sahl_provider', $('provider').value);
+  localStorage.setItem('sahl_key', $('key').value.trim());
+  localStorage.setItem('sahl_base', $('base').value.trim() || 'https://api.deepseek.com');
+  localStorage.setItem('sahl_model', $('model').value.trim() || 'deepseek-v4-pro');
+  localStorage.setItem('sahl_effort', $('effort').value);
+  $('setMsg').textContent = '已保存 ✓';
+}
+(function initSet() {
+  $('provider').value = localStorage.getItem('sahl_provider') || 'deepseek';
+  $('key').value = localStorage.getItem('sahl_key') || '';
+  $('base').value = localStorage.getItem('sahl_base') || 'https://api.deepseek.com';
+  $('model').value = localStorage.getItem('sahl_model') || 'deepseek-v4-pro';
+  $('effort').value = localStorage.getItem('sahl_effort') || 'max';
+})();
+
+function fillEx(el) { $('ask').value = el.textContent; }
+
+function scopeHint() {
+  var v = $('dataScope').value;
+  var el = $('scopeMsg');
+  if (v === 'all') el.innerHTML = '⚠️ 全部数据将发送给大模型。请确认表里没有身份证号、手机号、薪资等敏感内容；数据越多，处理越慢、费用越高。';
+  else if (v === 'header') el.textContent = 'AI 只能看到列名，适合最敏感的数据；需求里尽量写明列名，效果更稳。';
+  else el.textContent = '';
+}
+
+// 动态加载 SheetJS（双 CDN，国内优先）
+function loadXLSX(cb) {
+  if (window.XLSX) return cb(true);
+  var urls = [
+    'https://registry.npmmirror.com/xlsx/0.18.5/files/dist/xlsx.full.min.js',
+    'https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js'
+  ];
+  (function tryLoad(i) {
+    if (i >= urls.length) return cb(false);
+    var s = document.createElement('script');
+    s.src = urls[i];
+    s.onload = function () { cb(true); };
+    s.onerror = function () { tryLoad(i + 1); };
+    document.head.appendChild(s);
+  })(0);
+}
+loadXLSX(function () {});
+
+// 读文件（全部本地，AI 页签和文件工具页签共用）
+function handleFile(f) {
+  fileName = f.name.replace(/\.(xlsx|xls|csv)$/i, '');
+  var reader = new FileReader();
+  reader.onload = function (e) {
+    srcBuf = e.target.result;
+    loadXLSX(function (ok) {
+      if (!ok) { alert('表格解析库加载失败（需要联网加载一次）。请检查网络后刷新重试。'); return; }
+      try {
+        var wb = XLSX.read(e.target.result, { type: 'array' });
+        var ws = wb.Sheets[wb.SheetNames[0]];
+        rows = tidyRows(XLSX.utils.sheet_to_json(ws, { header: 1, defval: '', raw: false }));
+        outRows = null;
+        var info = '已读取 <b>' + f.name + '</b>：' + rows.length + ' 行 × ' + (rows[0] ? rows[0].length : 0) + ' 列（工作表：' + wb.SheetNames[0] + '）';
+        $('fileinfo').innerHTML = info;
+        $('fileinfo2').innerHTML = info;
+        $('beforePrev').innerHTML = renderTable(rows, 6);
+        $('afterPrev').innerHTML = '';
+        $('dl').style.display = 'none';
+        $('quickPrint').style.display = 'flex';
+        $('fqMsg').textContent = '';
+      } catch (err) { alert('文件解析失败：' + err.message); }
+    });
+  };
+  reader.readAsArrayBuffer(f);
+}
+$('file').addEventListener('change', function () { if (this.files[0]) handleFile(this.files[0]); });
+$('file2').addEventListener('change', function () { if (this.files[0]) handleFile(this.files[0]); });
+
+function esc(s) { return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+function renderTable(data, maxRows) {
+  if (!data || !data.length) return '';
+  var h = '<table class="preview">';
+  var n = Math.min(data.length, maxRows);
+  for (var i = 0; i < n; i++) {
+    h += '<tr>';
+    var r = data[i];
+    for (var c = 0; c < Math.min(r.length, 15); c++) {
+      var v = String(r[c] === undefined ? '' : r[c]);
+      if (v.length > 30) v = v.slice(0, 30) + '…';
+      h += '<td>' + esc(v) + '</td>';
+    }
+    h += '</tr>';
+  }
+  h += '</table>';
+  if (data.length > maxRows) h += '<div class="hint">（预览前 ' + maxRows + ' 行，共 ' + data.length + ' 行）</div>';
+  return h;
+}
+
+function log(msg, cls) {
+  var d = document.createElement('div');
+  if (cls) d.className = cls;
+  d.textContent = msg;
+  $('log').appendChild(d);
+}
+function clearLog() { $('log').innerHTML = ''; }
+
+var SYSTEM_PROMPT = [
+  '你是全能的 Excel 问题解决专家，通过编写 JavaScript 在用户浏览器中解决各类表格问题——数据处理、结构变换、打印排版、样式美化都在你的能力范围内。',
+  '',
+  '== 执行环境 ==',
+  '你的代码以 async function solve(ctx) 形式执行，ctx 提供：',
+  '- ctx.wb —— ExcelJS Workbook，已从用户原始文件加载（保留原有样式、合并单元格、列宽；CSV 时为由数据重建的工作簿）',
+  '- ctx.rows —— 第一个工作表的值二维数组（含标题行和表头行，结构见用户消息）',
+  '- ctx.ExcelJS —— ExcelJS 库（可 new ctx.ExcelJS.Workbook() 重建工作簿）',
+  '返回值二选一：',
+  '- return { type: "rows", rows: 新二维数组 } —— 纯数据类结果（用户可预览、可导出多格式）',
+  '- return { type: "xlsx", name: "输出文件名（不带后缀）", wb: 工作簿 } —— wb 填你要导出的 Workbook：可以是就地修改后的 ctx.wb，也可以是 new ctx.ExcelJS.Workbook() 新建的；若不返回 wb 字段则导出 ctx.wb。凡涉及格式、打印、样式、列宽、多工作表的任务用这个',
+  '',
+  '== 工作方法（先在思考中完成再编码）==',
+  '1. 诊断：用结构信息和列画像（最大字数/空值率/数字占比/日期占比）理解表格，不凭列名想当然',
+  '2. 归类：纯改数据 → rows 通道；涉及格式排版打印 → xlsx 通道；两者兼有 → xlsx 通道一并完成',
+  '3. 最小改动：只做需求要求的事。显示格式原样保留（日期"2026/7/3"就保持这个字符串）',
+  '4. 防御执行：按表头名定位列（trim 后比较），找不到就 throw new Error("找不到「XX」列，实际表头是："+JSON.stringify(表头行))——报错会回传给你修正；数字比较先清洗再 parseFloat；空单元格、类型混杂不得导致崩溃',
+  '5. 自检：不应改变行数的任务在返回前核对行数，不符就 throw 说明原因',
+  '',
+  '== 领域知识手册（按需取用）==',
+  '【单位】行高=磅pt；列宽=字符宽，1个中文≈2字符宽；A4=210×297mm',
+  '【A4单页打印配方】ws.pageSetup = { paperSize:9, orientation:"portrait"或"landscape", fitToPage:true, fitToWidth:1, fitToHeight:1, horizontalCentered:true, verticalCentered:true, margins:{left:0.2,right:0.2,top:0.3,bottom:0.3,header:0.1,footer:0.1} }',
+  '——fitToPage:true 必须显式设置否则 fitTo* 不生效；设置后"恰好一页"由 Excel 缩放机制保证，行列尺寸只影响美观程度',
+  '【列宽算法】每列宽=该列最大显示宽度+2（中文计2），范围[6,45]；列数多或内容宽时改横向',
+  '【行高填页算法】缩放比 s=min(可用宽/自然宽, 可用高/自然高)；A4纵向可用宽7.87英寸（1字符宽≈7/96英寸）、可用高≈799pt，横向为11.29英寸/552pt；宽度受限时数据行行高≈(可用高/s−标题行高−表头行高)/数据行数，钳制在[18,34]——这样缩放后恰好填满页面、无底部留白',
+  '【名单/签到类打印惯例】大标题合并居中加粗16pt行高34、表头加粗12pt行高24、全表细边框、内容居中不换行、签名列留足宽度',
+  '【常见陷阱】合并单元格的值只在区域左上角；ExcelJS 写单元格用 ws.getCell(行,列).value，遍历用 ws.eachRow；原文件第一行可能是合并大标题；写入日期严禁使用 new Date() 对象（时区会导致日期偏移一天）——统一写 "2026-06-02" 这样的字符串',
+  '【绝对禁止】以任何理由截断、缩写、删减单元格内容——内容完整性高于一切排版和美观要求',
+  '',
+  '== 输出要求 ==',
+  '只输出 async function solve(ctx) { ... } 的完整代码，不要解释文字，不要 markdown 标记。',
+  '除 ctx 外禁止访问页面环境：不得使用 fetch、XMLHttpRequest、import、require、eval、localStorage、document。'
+].join('\n');
+
+function buildBody(messages, effortOpt) {
+  var provider = localStorage.getItem('sahl_provider') || 'deepseek';
+  var model = localStorage.getItem('sahl_model') || 'deepseek-v4-pro';
+  var effort = effortOpt || localStorage.getItem('sahl_effort') || 'max';
+  var body = { model: model, messages: messages, max_tokens: effort === 'off' ? 8000 : 24000 };
+  if (provider === 'deepseek') {
+    if (effort === 'off') { body.thinking = { type: 'disabled' }; body.temperature = 0; }
+    else { body.thinking = { type: 'enabled' }; body.reasoning_effort = effort; }
+  } else {
+    // 思考模式参数各家写法不同，非 DeepSeek 一律用其默认行为，只控制温度
+    body.temperature = 0;
+  }
+  return body;
+}
+function callLLM(messages, cb, errCb, effortOpt) {
+  var key = localStorage.getItem('sahl_key') || '';
+  var base = localStorage.getItem('sahl_base') || 'https://api.deepseek.com';
+  if (!key) { errCb('还没有填 API Key：请先打开下方的「设置」保存 Key'); return; }
+  fetch(base + '/chat/completions', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + key },
+    body: JSON.stringify(buildBody(messages, effortOpt))
+  }).then(function (r) {
+    if (!r.ok) throw new Error('接口返回 HTTP ' + r.status + (r.status === 401 ? '（Key 无效或没保存）' : r.status === 402 ? '（余额不足）' : ''));
+    return r.json();
+  }).then(function (d) {
+    var ch = d.choices && d.choices[0];
+    var content = (ch && ch.message && ch.message.content) || '';
+    if (!content.trim()) {
+      throw new Error('模型返回了空内容' + (ch && ch.finish_reason === 'length'
+        ? '——输出被长度上限截断（思考占满了额度）。已提高上限，请重试；若仍出现，把思考力度换成 High'
+        : '（finish_reason: ' + (ch ? ch.finish_reason : '未知') + '）'));
+    }
+    cb(content);
+  }).catch(function (e) { errCb(e.message || String(e)); });
+}
+
+function extractCode(text) {
+  var t = text.replace(/```[a-z]*\n?/g, '').replace(/```/g, '');
+  t = t.replace(/export\s+default\s+/g, '').replace(/^\s*export\s+/gm, '');
+  var i = t.indexOf('async function solve');
+  if (i < 0) i = t.indexOf('function solve');
+  if (i < 0) i = t.search(/(const|let|var)\s+solve\s*=/);
+  if (i < 0) i = t.search(/(async\s+)?function\s+[A-Za-z_$]/);
+  if (i >= 0) t = t.slice(i);
+  var j = t.lastIndexOf('}');
+  if (j >= 0) t = t.slice(0, j + 1);
+  return t;
+}
+
+function runCode(code, data, cb, errCb) {
+  var src = 'self.onmessage=function(e){try{' + code +
+    '\nvar out=transform(e.data);postMessage({ok:true,out:out});}' +
+    'catch(err){postMessage({ok:false,err:String(err&&err.message||err)});}};';
+  try {
+    var blob = new Blob([src], { type: 'application/javascript' });
+    var w = new Worker(URL.createObjectURL(blob));
+    var to = setTimeout(function () { w.terminate(); errCb('执行超时（超过 10 秒）'); }, 10000);
+    w.onmessage = function (e) {
+      clearTimeout(to); w.terminate();
+      if (e.data.ok) cb(e.data.out); else errCb(e.data.err);
+    };
+    w.onerror = function (e) { clearTimeout(to); w.terminate(); errCb(e.message || '执行出错'); };
+    w.postMessage(data);
+  } catch (ex) {
+    try {
+      var fn = new Function(code + '\nreturn transform;')();
+      cb(fn(data));
+    } catch (err) { errCb(String(err && err.message || err)); }
+  }
+}
+
+function runSolve(code, cb, errCb) {
+  loadExcelJS(function (ok) {
+    if (!ok) { errCb('Excel 处理库加载失败（需要联网加载一次），请检查网络后重试'); return; }
+    var wb = new ExcelJS.Workbook();
+    var load = srcBuf
+      ? wb.xlsx.load(srcBuf.slice(0)).catch(function () {
+          var ws = wb.addWorksheet('Sheet1');
+          for (var i = 0; i < rows.length; i++) ws.addRow(rows[i]);
+        })
+      : Promise.resolve(wb.addWorksheet('Sheet1'));
+    var ctxObj = null;
+    load.then(function () {
+      ctxObj = { wb: wb, rows: JSON.parse(JSON.stringify(rows)), ExcelJS: window.ExcelJS };
+      var fn = null, parseErr = '';
+      try {
+        fn = new Function(code + '\nreturn (typeof solve !== "undefined") ? solve : null;')();
+      } catch (pe) { parseErr = pe.message; }
+      if (typeof fn !== 'function') {
+        var m1 = code.match(/(?:async\s+)?function\s+([A-Za-z_$][\w$]*)\s*\(/) ||
+                 code.match(/(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*=\s*async/) ||
+                 code.match(/(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*=\s*\(/);
+        if (m1) {
+          try { fn = new Function(code + '\nreturn (typeof ' + m1[1] + ' !== "undefined") ? ' + m1[1] + ' : null;')(); }
+          catch (pe2) { parseErr = pe2.message; }
+        }
+      }
+      if (typeof fn !== 'function') {
+        throw new Error((parseErr ? '代码解析失败：' + parseErr : '代码里没有找到可调用的主函数') + '。你输出的代码开头是：' + code.slice(0, 160));
+      }
+      return Promise.race([
+        Promise.resolve(fn(ctxObj)),
+        new Promise(function (x, rej) { setTimeout(function () { rej(new Error('执行超时（30 秒）')); }, 30000); })
+      ]);
+    }).then(function (res) { cb(res, (res && res.wb) || (ctxObj && ctxObj.wb) || wb); })
+      .catch(function (e) { errCb(String(e && e.message || e)); });
+  });
+}
+
+function validOut(out) {
+  if (!Array.isArray(out) || !out.length) return false;
+  for (var i = 0; i < out.length; i++) if (!Array.isArray(out[i])) return false;
+  return true;
+}
+
+function run() {
+  if (!rows || !rows.length) { alert('先在第 ① 步选择一个表格文件'); return; }
+  var ask = $('ask').value.trim();
+  if (!ask) { alert('先在第 ② 步描述你想怎么处理'); return; }
+  clearLog();
+  $('go').disabled = true;
+  progStart();
+  $('dl').style.display = 'none';
+  $('afterPrev').innerHTML = '';
+  $('codeBox').style.display = 'none';
+
+  var dt0 = detectTitle(rows);
+  var work = dt0.body;
+  var scope = $('dataScope').value;
+  var userMsg = '文件名：' + fileName + '\n' +
+    (dt0.title
+      ? '结构：ctx.rows 第 1 行是大标题「' + dt0.title + '」（原文件中为合并单元格），第 2 行是表头，数据从第 3 行开始\n'
+      : '结构：ctx.rows 第 1 行是表头，数据从第 2 行开始\n') +
+    '表头：' + JSON.stringify(work[0]) + '\n' +
+    '列画像（基于前 200 行统计）：' + JSON.stringify(colProfile(work)) + '\n';
+  if (scope === 'all') {
+    var payload = JSON.stringify(work.slice(1));
+    if (payload.length > 400000) {
+      alert('数据太大（约 ' + Math.round(payload.length / 10000) + ' 万字符），全量发送会又慢又贵。建议改用"表头 + 示例"模式。');
+      $('go').disabled = false; return;
+    }
+    if (payload.length > 80000 && !confirm('数据较大，全量发送会明显变慢、费用增加。继续吗？')) {
+      $('go').disabled = false; return;
+    }
+    userMsg += '全部数据行：' + payload + '\n';
+    userMsg += '（以上是全部真实数据。如果需求涉及语义判断——如分类、打标签、纠错——可以把具体的映射关系直接写进代码里。）\n';
+  } else if (scope === 'sample' && work.length > 1) {
+    userMsg += '示例行：' + JSON.stringify(work.slice(1, 3)) + '\n';
+  }
+  userMsg += '数据行共 ' + (work.length - 1) + ' 行（ctx.rows 总行数 ' + rows.length + '）。\n处理需求：' + ask;
+
+  var messages = [
+    { role: 'system', content: SYSTEM_PROMPT },
+    { role: 'user', content: userMsg }
+  ];
+
+  log('① 已发送需求与结构诊断（数据留在本地），模型思考中——Max 档可能需要一两分钟，请耐心…');
+  attempt(messages, 1);
+
+  function attempt(msgs, n) {
+    callLLM(msgs, function (reply) {
+      var code = extractCode(reply);
+      log('② 已生成处理代码（第 ' + n + ' 次），本地执行中…');
+      runSolve(code, function (res, wb) {
+        if (res && res.type === 'xlsx') {
+          var ws0 = wb.worksheets && wb.worksheets[0];
+          log('导出检查：工作簿含 ' + (wb.worksheets ? wb.worksheets.length : '?') + ' 个工作表，第 1 个 ' + (ws0 ? ws0.rowCount : '?') + ' 行' +
+            ((ws0 && ws0.rowCount === rows.length) ? '（与输入行数相同——若需求应当增删行，请打开文件核对是否真的处理过）' : ''));
+          wb.xlsx.writeBuffer().then(function (buf) {
+            var a = document.createElement('a');
+            a.href = URL.createObjectURL(new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }));
+            a.download = String(res.name || fileName + '-处理后').replace(/\.xlsx$/i, '') + '.xlsx';
+            a.click();
+            log('③ 完成 ✓ AI 选择了格式通道，已生成带样式/打印设置的 Excel 并开始下载。格式类结果无法在此预览，请打开文件用打印预览验收。', 'ok');
+            $('code').textContent = code;
+            $('codeBox').style.display = 'block';
+            $('go').disabled = false;
+          }).catch(function (e) { onFail(msgs, code, '导出 Excel 失败：' + e.message, n); });
+          return;
+        }
+        if (res && res.type === 'rows' && validOut(res.rows)) {
+          var out = res.rows;
+          log('③ 完成 ✓　' + (rows.length - 1) + ' 行 → ' + (out.length - 1) + ' 行', 'ok');
+          log('自检报告：' + diffReport(rows, out));
+          outRows = out;
+          $('afterPrev').innerHTML = '<div class="hint" style="margin-top:14px"><b>处理结果预览：</b></div>' + renderTable(out, 8);
+          $('dl').style.display = 'flex';
+          $('code').textContent = code;
+          $('codeBox').style.display = 'block';
+          $('go').disabled = false;
+          return;
+        }
+        onFail(msgs, code, '返回值不符合约定：需要 {type:"rows", rows:[...]} 或 {type:"xlsx"}', n);
+      }, function (err) { onFail(msgs, code, err, n); });
+    }, function (err) {
+      log('调用失败：' + err, 'err');
+      $('go').disabled = false;
+    });
+  }
+
+  function onFail(msgs, code, err, n) {
+    if (n >= 2) {
+      log('执行失败：' + err, 'err');
+      log('已重试仍未成功。试试把需求说得更具体（比如指明列名），或换个说法。', 'err');
+      $('code').textContent = code;
+      $('codeBox').style.display = 'block';
+      $('go').disabled = false;
+      return;
+    }
+    log('执行报错，让 AI 自我修复中…（' + err + '）');
+    var m2 = msgs.concat([
+      { role: 'assistant', content: code },
+      { role: 'user', content: '这段代码执行报错：' + err + '。请修复。同样只输出完整的 async function solve(ctx) 代码，不要解释。' }
+    ]);
+    attempt(m2, n + 1);
+  }
+}
+
+function tableHTML() {
+  var h = '<table border="1" cellspacing="0" cellpadding="4" style="border-collapse:collapse;font-size:12px">';
+  for (var i = 0; i < outRows.length; i++) {
+    h += '<tr>';
+    for (var c = 0; c < outRows[i].length; c++) {
+      var v = String(outRows[i][c] === undefined ? '' : outRows[i][c]);
+      h += (i === 0 ? '<th style="background:#eef2ee">' : '<td>') + esc(v) + (i === 0 ? '</th>' : '</td>');
+    }
+    h += '</tr>';
+  }
+  return h + '</table>';
+}
+function dlXlsx() {
+  if (!outRows) return;
+  var ws = XLSX.utils.aoa_to_sheet(outRows);
+  var wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, '处理结果');
+  XLSX.writeFile(wb, fileName + '-处理后.xlsx');
+}
+function dlWord() {
+  if (!outRows) return;
+  var html = '<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word">' +
+    '<head><meta charset="UTF-8"><title>' + esc(fileName) + '</title></head><body>' + tableHTML() + '</body></html>';
+  var a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob(['﻿', html], { type: 'application/msword' }));
+  a.download = fileName + '-处理后.doc';
+  a.click();
+}
+function dlPdf() {
+  if (!outRows) return;
+  var w = window.open('', '_blank');
+  if (!w) { alert('浏览器拦截了新窗口，请允许弹窗后重试'); return; }
+  w.document.write('<html><head><meta charset="UTF-8"><title>' + esc(fileName) + '-处理后</title>' +
+    '<style>body{font-family:"Microsoft YaHei",sans-serif;padding:20px}h3{margin-bottom:12px}</style>' +
+    '</head><body><h3>' + esc(fileName) + ' · 处理结果</h3>' + tableHTML() + '</body></html>');
+  w.document.close();
+  w.focus();
+  setTimeout(function () { w.print(); }, 300);
+}
+function tidyRows(data) {
+  var maxC = 0, kept = [];
+  for (var i = 0; i < data.length; i++) {
+    var r = data[i], last = -1;
+    for (var c = 0; c < r.length; c++) if (String(r[c] === undefined ? '' : r[c]).trim() !== '') last = c;
+    if (last >= 0) { kept.push(r); if (last + 1 > maxC) maxC = last + 1; }
+  }
+  for (var j = 0; j < kept.length; j++) kept[j] = kept[j].slice(0, maxC);
+  return kept;
+}
+function detectTitle(data) {
+  if (data.length > 1) {
+    var r0 = data[0], vals = [];
+    for (var c = 0; c < r0.length; c++) if (String(r0[c]).trim() !== '') vals.push(String(r0[c]).trim());
+    var n1 = 0;
+    for (var c2 = 0; c2 < data[1].length; c2++) if (String(data[1][c2]).trim() !== '') n1++;
+    if (vals.length === 1 && n1 >= 2) return { title: vals[0], body: data.slice(1) };
+  }
+  return { title: null, body: data };
+}
+function colProfile(data) {
+  if (data.length < 2) return [];
+  var head = data[0], out = [], st = colStats(data);
+  var n = Math.min(data.length - 1, 200);
+  for (var c = 0; c < head.length; c++) {
+    var empty = 0, num = 0, date = 0;
+    for (var i = 1; i <= n; i++) {
+      var v = String((data[i] || [])[c] === undefined ? '' : data[i][c]).trim();
+      if (v === '') { empty++; continue; }
+      if (/^-?[\d,，]+(\.\d+)?$/.test(v)) num++;
+      else if (/\d{4}[-/年]\d{1,2}([-/月]\d{1,2})?|\d{1,2}[:：]\d{2}/.test(v)) date++;
+    }
+    out.push({ 列: String(head[c]), 最大字数: st[c] || 0, 空值: Math.round(empty * 100 / n) + '%', 数字占比: Math.round(num * 100 / n) + '%', 日期占比: Math.round(date * 100 / n) + '%' });
+  }
+  return out;
+}
+function diffReport(before, after) {
+  var msg = '行 ' + (before.length - 1) + '→' + (after.length - 1) + '，列 ' + (before[0] || []).length + '→' + (after[0] || []).length;
+  if (before.length === after.length && (before[0] || []).length === (after[0] || []).length) {
+    var cols = {}, n = Math.min(before.length, 51), changed = 0, total = 0;
+    for (var i = 1; i < n; i++) for (var c = 0; c < (before[i] || []).length; c++) {
+      total++;
+      if (String(before[i][c]) !== String((after[i] || [])[c])) { changed++; cols[String(before[0][c] || '第' + (c + 1) + '列')] = 1; }
+    }
+    var names = Object.keys(cols);
+    msg += changed ? '；约 ' + Math.round(changed * 100 / Math.max(total, 1)) + '% 单元格被改动（涉及列：' + names.join('、') + '）——请确认这些改动是你要求的' : '；单元格内容无变化';
+  }
+  return msg;
+}
+function colStats(data) {
+  var stats = [];
+  for (var i = 0; i < data.length; i++) {
+    for (var c = 0; c < data[i].length; c++) {
+      var L = String(data[i][c] === undefined ? '' : data[i][c]).length;
+      if (!stats[c] || L > stats[c]) stats[c] = L;
+    }
+  }
+  return stats;
+}
+function printA4(spec) {
+  var data = (outRows && outRows.length) ? outRows : rows;
+  if (!data || !data.length) return;
+  var dt = detectTitle(data);
+  var body = dt.body;
+  var land = (spec && spec.orientation) ? spec.orientation === 'landscape' : $('landscape').checked;
+  var fs = (spec && spec.fontSize) ? spec.fontSize : 13;
+  var title = (spec && spec.title) ? spec.title : (dt.title || fileName);
+  var align = (spec && spec.align) || [];
+  var stats = colStats(body);
+  var wrap = {};
+  if (spec && spec.wrapCols) { for (var k = 0; k < spec.wrapCols.length; k++) wrap[spec.wrapCols[k]] = 1; }
+  else { for (var c0 = 0; c0 < stats.length; c0++) if (stats[c0] > 25) wrap[c0] = 1; }
+
+  var h = '<table id="t">';
+  for (var i = 0; i < body.length; i++) {
+    h += '<tr>';
+    for (var c = 0; c < body[i].length; c++) {
+      var v = esc(String(body[i][c] === undefined ? '' : body[i][c]));
+      var st = (wrap[c] ? 'white-space:normal;max-width:70mm;word-break:break-word;' : '') +
+               (align[c] ? 'text-align:' + align[c] + ';' : '');
+      h += (i === 0 ? '<th' : '<td') + (st ? ' style="' + st + '"' : '') + '>' + v + (i === 0 ? '</th>' : '</td>');
+    }
+    h += '</tr>';
+  }
+  h += '</table>';
+  var w = window.open('', '_blank');
+  if (!w) { alert('浏览器拦截了新窗口，请允许弹窗后重试'); return; }
+  w.document.write('<html><head><meta charset="UTF-8"><title>' + esc(title) + '</title><style>' +
+    '@page{size:A4 ' + (land ? 'landscape' : 'portrait') + ';margin:12mm}' +
+    'body{font-family:"Microsoft YaHei",sans-serif;margin:0;text-align:center}' +
+    '#box{display:inline-block;text-align:left}' +
+    'h2{text-align:center;font-size:18px;margin:0 0 10px}' +
+    '#t{border-collapse:collapse;margin:0 auto}' +
+    '#t th{background:#f0f0f0}' +
+    '#t th,#t td{border:1px solid #333;padding:6px 10px;font-size:' + fs + 'px;text-align:center;white-space:nowrap}' +
+    '</style></head><body><div id="box"><h2>' + esc(title) + '</h2>' + h + '</div>' +
+    '<scr' + 'ipt>window.onload=function(){' +
+    'var r=document.createElement("div");r.style.height="100mm";r.style.position="absolute";document.body.appendChild(r);' +
+    'var pxmm=r.getBoundingClientRect().height/100;document.body.removeChild(r);' +
+    'var availW=' + (land ? 273 : 186) + '*pxmm,availH=' + (land ? 186 : 273) + '*pxmm;' +
+    'var box=document.getElementById("box");' +
+    'function fit(){var b=box.getBoundingClientRect();var s=Math.min(availW/b.width,availH/b.height);' +
+    'if(s<1){s*=0.97;if("zoom" in box.style){box.style.zoom=(parseFloat(box.style.zoom||1))*s;}' +
+    'else{box.style.transformOrigin="top center";box.style.transform="scale("+s+")";}}}' +
+    'fit();setTimeout(fit,60);' +
+    'setTimeout(function(){window.print()},450);' +
+    '};<\/scr' + 'ipt></body></html>');
+  w.document.close();
+}
+
+// ---------- 打印版 Excel（移植自 Fable5 的 A4 适配算法：fitToPage 兜底 + 内容定列宽 + 公式反算行高）----------
+var lastLayoutSpec = null;
+function loadExcelJS(cb) {
+  if (window.ExcelJS) return cb(true);
+  var urls = [
+    'https://registry.npmmirror.com/exceljs/4.4.0/files/dist/exceljs.min.js',
+    'https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js'
+  ];
+  (function tryLoad(i) {
+    if (i >= urls.length) return cb(false);
+    var s = document.createElement('script');
+    s.src = urls[i];
+    s.onload = function () { cb(true); };
+    s.onerror = function () { tryLoad(i + 1); };
+    document.head.appendChild(s);
+  })(0);
+}
+function dlPrintXlsx(spec) {
+  spec = spec || lastLayoutSpec;
+  var data = (outRows && outRows.length) ? outRows : rows;
+  if (!data || !data.length) { alert('先在第 ① 步选择一个表格文件'); return; }
+  loadExcelJS(function (ok) {
+    if (!ok) { alert('Excel 排版库加载失败（需要联网加载一次），请检查网络后重试。'); return; }
+    var dt = detectTitle(data);
+    var body = dt.body;
+    var title = (spec && spec.title) ? spec.title : (dt.title || fileName);
+    var land = (spec && spec.orientation) ? spec.orientation === 'landscape' : $('landscape').checked;
+    var nCols = (body[0] || []).length, nData = body.length - 1;
+
+    // 列宽：按内容显示宽度定（中文按 2 个字符宽计），留 2 字符呼吸感，范围 [6, 45]
+    function dispW(s) { var w = 0; for (var i = 0; i < s.length; i++) w += s.charCodeAt(i) > 255 ? 2 : 1; return w; }
+    var colW = [];
+    for (var c = 0; c < nCols; c++) {
+      var m = 4;
+      for (var r = 0; r < body.length; r++) {
+        var w0 = dispW(String(body[r][c] === undefined ? '' : body[r][c]));
+        if (w0 > m) m = w0;
+      }
+      colW.push(Math.max(6, Math.min(45, m + 2)));
+    }
+
+    // 行高反算（Fable5 公式）：fitToPage 的缩放比 s = min(可用宽/自然宽, 可用高/自然高)；
+    // 宽度受限时按 需要自然高 = 可用高/s 反算行高，让缩放后恰好填满页面高度
+    var totalChars = 0; for (var k = 0; k < colW.length; k++) totalChars += colW[k];
+    var usableW_in = land ? 11.29 : 7.87, usableH_pt = land ? 552 : 799;
+    var naturalW_in = totalChars * 7 / 96;
+    var sc = Math.min(1, usableW_in / naturalW_in);
+    var titleH = dt.title ? 34 : 0, headH = 24;
+    var rowH = Math.max(18, Math.min(34, Math.round((usableH_pt / sc - titleH - headH) / Math.max(nData, 1))));
+
+    var wb = new ExcelJS.Workbook();
+    var ws = wb.addWorksheet('打印版');
+    var thin = { style: 'thin', color: { argb: 'FF000000' } };
+    var border = { top: thin, left: thin, bottom: thin, right: thin };
+    var center = { horizontal: 'center', vertical: 'middle' };
+    var rowOffset = 0;
+
+    if (dt.title) {
+      ws.mergeCells(1, 1, 1, nCols);
+      var tc = ws.getCell(1, 1);
+      tc.value = title;
+      tc.font = { name: '宋体', size: 16, bold: true };
+      tc.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
+      tc.border = border;
+      ws.getRow(1).height = titleH;
+      rowOffset = 1;
+    }
+    for (var i = 0; i < body.length; i++) {
+      var rw = ws.getRow(i + 1 + rowOffset);
+      for (var c2 = 0; c2 < nCols; c2++) {
+        var cell = rw.getCell(c2 + 1);
+        cell.value = body[i][c2] === undefined ? '' : body[i][c2];
+        cell.font = i === 0 ? { name: '宋体', size: 12, bold: true } : { name: '宋体', size: 12 };
+        cell.alignment = center;
+        cell.border = border;
+      }
+      rw.height = i === 0 ? headH : rowH;
+    }
+    for (var c3 = 0; c3 < nCols; c3++) ws.getColumn(c3 + 1).width = colW[c3];
+
+    // 单页兜底：A4 + fitToPage 1×1 + 水平垂直居中 + 窄边距（易错点：fitToPage 必须为 true，fitTo* 才生效）
+    ws.pageSetup = {
+      paperSize: 9, orientation: land ? 'landscape' : 'portrait',
+      fitToPage: true, fitToWidth: 1, fitToHeight: 1,
+      horizontalCentered: true, verticalCentered: true,
+      margins: { left: 0.2, right: 0.2, top: 0.3, bottom: 0.3, header: 0.1, footer: 0.1 }
+    };
+
+    wb.xlsx.writeBuffer().then(function (buf) {
+      var a = document.createElement('a');
+      a.href = URL.createObjectURL(new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }));
+      a.download = fileName + '-打印版.xlsx';
+      a.click();
+      $('qpMsg').textContent = '✓ 打印版 Excel 已下载：A4 ' + (land ? '横向' : '纵向') + '、缩放到一页、列宽按内容适配、行高 ' + rowH + 'pt';
+    }).catch(function (e) { alert('生成失败：' + e.message); });
+  });
+}
+
+// ---------- 文件工具页签：免 AI 的一键文件处理 ----------
+function fqNeedFile() { if (!rows || !rows.length) { alert('先在第 ① 步选择一个表格文件'); return true; } return false; }
+function fqSave(aoa, suffix, msg) {
+  var ws = XLSX.utils.aoa_to_sheet(aoa);
+  var wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Sheet1');
+  XLSX.writeFile(wb, fileName + suffix + '.xlsx');
+  $('fqMsg').textContent = '✓ ' + msg;
+}
+function fqClean() {
+  if (fqNeedFile()) return;
+  var out = rows.map(function (r) { return r.map(function (c) { return String(c === undefined ? '' : c).replace(/　/g, ' ').trim(); }); })
+    .filter(function (r) { return r.some(function (c) { return c !== ''; }); });
+  fqSave(out, '-已清理', '清理完成：' + rows.length + ' 行 → ' + out.length + ' 行');
+}
+function fqDedup() {
+  if (fqNeedFile()) return;
+  var dt = detectTitle(rows);
+  var head = dt.title ? 2 : 1;
+  var keep = rows.slice(0, head), seen = {}, dup = 0;
+  for (var i = head; i < rows.length; i++) {
+    var k = rows[i].map(function (c) { return String(c).trim(); }).join('');
+    if (seen[k]) { dup++; continue; }
+    seen[k] = 1; keep.push(rows[i]);
+  }
+  fqSave(keep, '-已去重', '去重完成：删除 ' + dup + ' 行重复，剩 ' + (keep.length - head) + ' 行数据');
+}
+function fqMask() {
+  if (fqNeedFile()) return;
+  var re = /(1[3-9]\d)\s*-?\s*(\d{4})\s*-?\s*(\d{4})(?!\d)/g;
+  var n = 0;
+  var out = rows.map(function (r) { return r.map(function (c) {
+    return String(c === undefined ? '' : c).replace(re, function (m, a, b, cc) { n++; return a + '****' + cc; });
+  }); });
+  if (!n) { $('fqMsg').textContent = '没有找到手机号，未生成文件'; return; }
+  fqSave(out, '-已打码', '打码完成：处理了 ' + n + ' 个手机号');
+}
+function fqSplit() {
+  if (fqNeedFile()) return;
+  var colName = $('splitCol').value.trim();
+  if (!colName) { alert('先在旁边输入要按哪一列拆分（填列名）'); return; }
+  var dt = detectTitle(rows);
+  var head = dt.body[0].map(function (h) { return String(h).trim(); });
+  var ci = head.indexOf(colName);
+  if (ci < 0) { alert('找不到「' + colName + '」列。实际表头：' + head.join('、')); return; }
+  var groups = {}, order = [];
+  for (var i = 1; i < dt.body.length; i++) {
+    var key = String(dt.body[i][ci]).trim() || '（空）';
+    if (!groups[key]) { groups[key] = []; order.push(key); }
+    groups[key].push(dt.body[i]);
+  }
+  var wb = XLSX.utils.book_new();
+  order.forEach(function (k, idx) {
+    var name = k.replace(/[\\\/\?\*\[\]:]/g, '_').slice(0, 26) || ('分组' + (idx + 1));
+    if (wb.SheetNames.indexOf(name) >= 0) name = name + '_' + (idx + 1);
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([dt.body[0]].concat(groups[k])), name);
+  });
+  XLSX.writeFile(wb, fileName + '-按' + colName + '拆分.xlsx');
+  $('fqMsg').textContent = '✓ 拆分完成：' + order.length + ' 个工作表';
+}
+$('mergeFiles').addEventListener('change', function () {
+  var files = Array.prototype.slice.call(this.files);
+  this.value = '';
+  if (!files.length) return;
+  loadXLSX(function (ok) {
+    if (!ok) { alert('解析库加载失败，请检查网络后重试'); return; }
+    var all = [], done = 0, errs = [];
+    files.forEach(function (f, idx) {
+      var rd = new FileReader();
+      rd.onload = function (e) {
+        try {
+          var wb0 = XLSX.read(e.target.result, { type: 'array' });
+          var aoa = tidyRows(XLSX.utils.sheet_to_json(wb0.Sheets[wb0.SheetNames[0]], { header: 1, defval: '', raw: false }));
+          all[idx] = detectTitle(aoa).body;
+        } catch (err) { errs.push(f.name + '：' + err.message); all[idx] = null; }
+        done++;
+        if (done === files.length) finish();
+      };
+      rd.readAsArrayBuffer(f);
+    });
+    function finish() {
+      var merged = null;
+      for (var i = 0; i < all.length; i++) {
+        if (!all[i] || !all[i].length) continue;
+        if (!merged) merged = all[i].slice();
+        else merged = merged.concat(all[i].slice(1));
+      }
+      if (!merged) { alert('没有可合并的数据。' + errs.join('；')); return; }
+      var wb1 = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb1, XLSX.utils.aoa_to_sheet(merged), '合并结果');
+      XLSX.writeFile(wb1, '合并表格-' + files.length + '个文件.xlsx');
+      $('fqMsg').textContent = '✓ 合并完成：' + files.length + ' 个文件 → ' + (merged.length - 1) + ' 行数据（以第一个文件的表头为准）' + (errs.length ? '；失败：' + errs.join('；') : '');
+    }
+  });
+});
+
+var LAYOUT_PROMPT = [
+  '你是专业的表格打印排版设计师。根据表头、各列内容的最大字数和数据行数，为 A4 纸打印设计排版参数。',
+  '只输出一个 JSON 对象，不要任何解释文字，不要 markdown 标记。字段如下：',
+  '{"orientation":"portrait"或"landscape","fontSize":10到16的整数,"title":"打印用的正式标题",',
+  '"align":每列的对齐方式数组（"left"/"center"/"right"）,"wrapCols":允许折行的列序号数组（从0开始）}',
+  '设计原则：',
+  '1. 列数多或有很长的内容列时选 landscape',
+  '2. 姓名、日期、电话、编号这类短内容列绝不允许折行；只有备注、地址等长文本列才放进 wrapCols',
+  '3. 行数多时适当调小 fontSize，保证一页放下且清晰',
+  '4. 数字和金额列用 right，其余通常 center',
+  '5. title 要正式简洁，适合作为打印文件的抬头'
+].join('\n');
+
+function aiLayout() {
+  if (!rows || !rows.length) { alert('先在第 ① 步选择一个表格文件'); return; }
+  if (!(localStorage.getItem('sahl_key') || '')) {
+    alert('AI 排版需要 API Key：请先在本页签底部的「⚙️ 设置」里粘贴并保存 Key');
+    return;
+  }
+  var data = (outRows && outRows.length) ? outRows : rows;
+  var dt = detectTitle(data);
+  var req = $('ask').value.trim() || '打印到一页 A4，内容完整、美观大方';
+  var btn = $('aiLayoutBtn'), msg = $('qpMsg');
+  btn.disabled = true;
+  msg.textContent = '🤖 AI 正在设计排版方案（只发表头和列宽信息，不发数据），约几秒到一分钟…';
+  var messages = [
+    { role: 'system', content: LAYOUT_PROMPT },
+    { role: 'user', content: (dt.title ? '表格大标题：' + dt.title + '\n' : '') + '表头：' + JSON.stringify(dt.body[0]) + '\n各列内容最大字数：' + JSON.stringify(colStats(dt.body)) + '\n数据行数：' + (dt.body.length - 1) + '\n排版要求：' + req }
+  ];
+  callLLM(messages, function (reply) {
+    btn.disabled = false;
+    try {
+      var spec = JSON.parse(reply.replace(/```json|```/g, '').trim());
+      lastLayoutSpec = spec;
+      msg.textContent = '✓ 方案完成（' + (spec.orientation === 'landscape' ? '横向' : '纵向') + '，字号 ' + spec.fontSize + '），已打开打印窗口；点「下载打印版 Excel」可得同方案的 Excel 文件';
+      printA4(spec);
+    } catch (e) {
+      msg.textContent = '方案解析失败，已改用默认排版打开';
+      printA4();
+    }
+  }, function (err) {
+    btn.disabled = false;
+    msg.textContent = '❌ 调用失败：' + err;
+  }, 'high');
+}
+// ---------- 进度条（跟随"让 AI 处理"按钮状态自动收起） ----------
+var progTimer = null, progT0 = 0;
+function progStart() {
+  progT0 = Date.now();
+  $('prog').style.display = 'block';
+  $('progTxt').textContent = '';
+  clearInterval(progTimer);
+  progTimer = setInterval(function () {
+    if (!$('go').disabled) { $('prog').style.display = 'none'; clearInterval(progTimer); return; }
+    var s = Math.round((Date.now() - progT0) / 1000);
+    $('progTxt').textContent = '处理中 · 已用 ' + s + ' 秒' + (s > 45 ? '（Max 档深度思考较慢，属正常）' : '');
+  }, 500);
+}
+
+// ---------- 多语言（Beta：界面级中英切换；处理日志暂为中文） ----------
+var I18N_EN = {
+  '🧰 表格急救箱': '🧰 Table Rescue Kit',
+  '半自动人类实验室 · 实验 001': 'Semiauto Human Lab · Exp 001 & 002',
+  '零配置，打开就用': 'Zero setup, works instantly',
+  '数据不出你的电脑': 'Your data never leaves your device',
+  '免费无广告': 'Free, no ads',
+  '🤖 新：AI 模式（内测）': '🤖 New: AI mode (beta)',
+  '✈️ 文件工具与粘贴小工具 100% 本地运行，断网也能用；🤖 AI 模式需联网调用大模型，但默认只发送「你的问题 + 表头」，表格数据仍留在你的电脑里。': '✈️ File tools & paste utilities run 100% locally — even offline. 🤖 AI mode calls an LLM online, but by default sends only your request + headers; your table data stays on your device.',
+  '🤖 AI 智能处理': '🤖 AI Assistant',
+  '📂 Excel 文件工具': '📂 File Tools',
+  '🧩 更多小工具：不用上传文件的 8 个粘贴快捷功能（名单核对 / 接龙提取手机号 / 随机抽签…）': '🧩 More utilities: 8 paste-based quick tools (Chinese UI only for now)',
+  '上传 Excel → 点一个按钮 → 下载处理好的 Excel。': 'Upload Excel → click a button → download the result.',
+  '全部在你的电脑本地完成，不联网、不用 AI、完全免费。': 'Everything runs locally — no upload, no AI, completely free.',
+  ' 选择表格文件': ' Choose a spreadsheet',
+  '支持 .xlsx / .xls / .csv。文件只在浏览器里读取，不会上传到任何服务器。': 'Supports .xlsx / .xls / .csv. Read locally, never uploaded.',
+  ' 选一个操作，直接出文件': ' Pick an action, get the file',
+  '🧹 一键清理（空行 / 空格 / 全角空格）': '🧹 Clean up (empty rows & stray spaces)',
+  '🗑 整行去重': '🗑 Remove duplicate rows',
+  '🔒 手机号一键打码': '🔒 Mask phone numbers',
+  '✂️ 按列拆分成多个工作表': '✂️ Split into sheets by column',
+  '➕ 合并多个表格文件': '➕ Merge multiple files',
+  '🖨️ A4 打印排版': '🖨️ A4 print layout',
+  '📄 下载打印版 Excel': '📄 Print-ready Excel',
+  '一句话描述需求，AI 生成处理代码，在你的浏览器本地执行。': 'Describe your need in one sentence — AI writes the code and runs it locally in your browser.',
+  '默认 AI 只看到你的问题和表头，不看数据；不含隐私的数据也可以选择全量发送。内测功能，结果请抽查核对。': 'By default the AI sees only your request and headers — never your data (full-data mode optional). Beta: please spot-check results.',
+  ' 一句话描述你想怎么处理': ' Describe what to do',
+  '什么需求都可以提：改数据、清洗统计，或打印排版、美化样式、页面设置——AI 会自己诊断、选择做法并生成结果（涉及格式的会直接产出排版好的 Excel 文件）。第 ① 步的按钮是常用需求的免 AI 快捷方式。': 'Ask anything: edit data, clean & summarize, or print layout and styling — the AI diagnoses your table, picks an approach, and delivers (format tasks produce a styled Excel directly).',
+  '删掉所有重复的行': 'Remove all duplicate rows',
+  '按金额列从大到小排序': 'Sort by amount, descending',
+  '手机号中间四位换成 ****': 'Mask middle 4 digits of phone numbers',
+  '把日期统一成 2026-01-01 这种格式': 'Normalize dates to 2026-01-01 format',
+  '按部门分别统计人数和金额合计': 'Subtotal count & amount by department',
+  '数据可见范围：': 'Data visibility: ',
+  '表头 + 前 2 行示例（推荐）': 'Headers + 2 sample rows (recommended)',
+  '只发表头（最私密）': 'Headers only (most private)',
+  '发送全部数据（不含隐私时可用）': 'Send all data (non-sensitive only)',
+  ' 处理与导出': ' Process & export',
+  '让 AI 处理': 'Run AI',
+  '下载 Excel': 'Download Excel',
+  '下载 CSV': 'Download CSV',
+  '下载 Word': 'Download Word',
+  '导出 PDF': 'Export PDF',
+  'PDF：在弹出的打印窗口里选「另存为 PDF」': 'PDF: choose "Save as PDF" in the print dialog',
+  '查看 AI 生成的处理代码（透明可审）': 'View the generated code (auditable)',
+  '⚙️ 设置（首次使用必填）': '⚙️ Settings (required once)',
+  '模型服务商（选择后自动填好接口地址和推荐模型）': 'Provider (auto-fills base URL & suggested model)',
+  'DeepSeek（默认，推荐）': 'DeepSeek (default, recommended)',
+  'Kimi · 月之暗面': 'Kimi · Moonshot AI',
+  '智谱 GLM': 'Zhipu GLM',
+  '通义千问 · 阿里百炼': 'Qwen · Alibaba Bailian',
+  '豆包 · 火山方舟': 'Doubao · Volcengine Ark',
+  '硅基流动 SiliconFlow': 'SiliconFlow',
+  '自定义（任何 OpenAI 兼容接口）': 'Custom (any OpenAI-compatible API)',
+  'OpenRouter（聚合：一个 Key 用遍全球模型）': 'OpenRouter (one key, every model)',
+  '提示：浏览器直连需服务商支持——国内各家、Gemini、OpenRouter 一般可以；OpenAI 官方接口通常不允许浏览器直连，海外用户推荐 OpenRouter。模型名更新很快，预填值仅供参考，以各家文档为准，可直接修改。': 'Note: direct browser calls require provider support — Chinese providers, Gemini and OpenRouter generally work; OpenAI\'s official API usually blocks browsers, so OpenRouter is recommended abroad. Model names change fast — prefills are suggestions, check each provider\'s docs.',
+  'API Key（仅保存在你自己浏览器的本地存储里——不在网页文件中、不会上传、分享网页文件也不会带出去）': 'API Key (stored only in your browser — never inside the page file, never uploaded, never shared)',
+  '接口地址（选服务商后自动填写，可改）': 'API base URL (auto-filled, editable)',
+  '模型': 'Model',
+  '思考力度（越高越聪明，也越慢；目前仅 DeepSeek 支持）': 'Reasoning effort (DeepSeek only)',
+  '清除 Key': 'Clear key',
+  'Max · 最强（复杂需求，较慢）': 'Max · strongest (slow)',
+  'High · 均衡': 'High · balanced',
+  '关闭思考 · 最快（简单需求）': 'Off · fastest (simple tasks)',
+  '保存设置': 'Save',
+  '🖨️ A4 打印排版（无需 AI，自动缩放到一页）': '🖨️ A4 print layout (no AI, fits one page)',
+  '🤖 AI 优化排版（智能选方向/字号/对齐）': '🤖 AI layout (orientation / font / alignment)',
+  ' 横向纸张（列多时勾选）': ' Landscape (for wide tables)',
+  '📄 下载打印版 Excel（内置缩放到一页）': '📄 Print-ready Excel (fit-to-one-page built in)',
+  '半自动人类实验室': 'Semiauto Human Lab',
+  ' · 实验 001 & 002 · 把重复交给机器，把时间还给人': ' · Exp 001 & 002 · Let machines do the repetitive work',
+  '本页是一个独立文件：右键另存到桌面即可使用（快捷工具断网可用，AI 模式需联网）': 'This page is a single file — save it and it just works (file tools run offline; AI mode needs internet)',
+  '公众号「半自动人类实验室」': 'WeChat official account: 半自动人类实验室'
+};
+var PH_EN = {
+  ask: 'e.g. Delete rows where column B is empty, then sort by amount descending',
+  splitCol: 'Column name to split by',
+  key: 'sk-...'
+};
+function setLang(lang) {
+  localStorage.setItem('sahl_lang', lang);
+  var tw = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, null, false);
+  var n;
+  while ((n = tw.nextNode())) {
+    var p = n.parentNode;
+    if (!p || !p.closest || p.closest('#log, script, style, textarea, pre')) continue;
+    if (lang === 'en') {
+      var k = n.textContent.trim();
+      if (I18N_EN[k]) {
+        if (n.__zh === undefined) n.__zh = n.textContent;
+        n.textContent = n.textContent.replace(k, I18N_EN[k]);
+      }
+    } else if (n.__zh !== undefined) {
+      n.textContent = n.__zh;
+    }
+  }
+  Object.keys(PH_EN).forEach(function (id) {
+    var el = $(id);
+    if (!el) return;
+    if (lang === 'en') { if (el.__zhPh === undefined) el.__zhPh = el.placeholder; el.placeholder = PH_EN[id]; }
+    else if (el.__zhPh !== undefined) el.placeholder = el.__zhPh;
+  });
+}
+$('lang').addEventListener('change', function () { setLang(this.value); });
+(function () {
+  var l = localStorage.getItem('sahl_lang') || 'zh';
+  $('lang').value = l;
+  if (l === 'en') setLang('en');
+})();
+
+function dlCsv() {
+  if (!outRows) return;
+  var csv = '﻿' + outRows.map(function (r) {
+    return r.map(function (c) {
+      var v = String(c === undefined ? '' : c);
+      return /[",\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v;
+    }).join(',');
+  }).join('\n');
+  var a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }));
+  a.download = fileName + '-处理后.csv';
+  a.click();
+}
+</script>
+</body>
+</html>
