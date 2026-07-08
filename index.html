@@ -667,7 +667,7 @@ function saveSet() {
   $('key').value = localStorage.getItem('sahl_key') || '';
   $('base').value = localStorage.getItem('sahl_base') || 'https://api.deepseek.com';
   $('model').value = localStorage.getItem('sahl_model') || 'deepseek-v4-pro';
-  $('effort').value = localStorage.getItem('sahl_effort') || 'max';
+  $('effort').value = localStorage.getItem('sahl_effort') || 'high';
 })();
 
 function fillEx(el) { $('ask').value = el.textContent; }
@@ -792,7 +792,7 @@ var SYSTEM_PROMPT = [
 function buildBody(messages, effortOpt) {
   var provider = localStorage.getItem('sahl_provider') || 'deepseek';
   var model = localStorage.getItem('sahl_model') || 'deepseek-v4-pro';
-  var effort = effortOpt || localStorage.getItem('sahl_effort') || 'max';
+  var effort = effortOpt || localStorage.getItem('sahl_effort') || 'high';
   var body = { model: model, messages: messages, max_tokens: effort === 'off' ? 8000 : 24000 };
   if (provider === 'deepseek') {
     if (effort === 'off') { body.thinking = { type: 'disabled' }; body.temperature = 0; }
